@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📊 Operação Carol - Dashboard Realtime</title>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- Estilos base (Tailwind CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0f172a; color: #f1f5f9; font-family: Inter, sans-serif; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 1rem; padding: 1.5rem; }
+    .title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .number { font-size: 2.5rem; font-weight: 800; color: #38bdf8; }
+    table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+    th, td { padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; }
+    th { color: #94a3b8; font-weight: 600; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-6">
+  <h1 class="text-3xl font-bold mb-4">📊 Painel Realtime — Operação Carol</h1>
+  <p class="text-slate-400 mb-8">Atualizado automaticamente em tempo real via Supabase Realtime</p>
+
+  <!-- Cards -->
+  <div class="grid grid-cols-2 gap-6 mb-8 w-full max-w-3xl">
+    <div class="card text-center">
+      <div class="title">Total IGOR</div>
+      <div id="countIgor" class="number">0</div>
+    </div>
+    <div class="card text-center">
+      <div class="title">Total JULIO</div>
+      <div id="countJulio" class="number text-green-400">0</div>
+    </div>
+  </div>
+
+  <!-- Tabela -->
+  <div class="card w-full max-w-5xl overflow-x-auto">
+    <div class="title mb-4">📥 Últimos Leads</div>
+    <table id="leadsTable">
+      <thead>
+        <tr>
+          <th>Operador</th>
+          <th>Caminho</th>
+          <th>Data</th>
+          <th>Hora</th>
+          <th>utm_source</th>
+          <th>utm_campaign</th>
+          <th>fbclid</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // Configuração Supabase
+    const SUPABASE_URL = "https://atexvoxukvaqittpqkov.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Elementos do dashboard
+    const tableBody = document.getElementById("tableBody");
+    const countIgor = document.getElementById("countIgor");
+    const countJulio = document.getElementById("countJulio");
+
+    let igorCount = 0;
+    let julioCount = 0;
+
+    // Função para carregar os últimos registros iniciais
+    async function loadInitialData() {
+      const { data, error } = await supabase
+        .from("PRESSEL_DADOS_TRAFEGO_PJTCAROL")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error("Erro ao carregar dados:", error);
+        return;
+      }
+
+      data.reverse().forEach(addRow);
+      updateCounts(data);
+    }
+
+    // Atualiza contadores
+    function updateCounts(data) {
+      igorCount = data.filter(l => l.operador === "IGOR").length;
+      julioCount = data.filter(l => l.operador === "JULIO").length;
+      countIgor.textContent = igorCount;
+      countJulio.textContent = julioCount;
+    }
+
+    // Adiciona linha na tabela
+    function addRow(lead) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${lead.operador}</td>
+        <td>${lead.caminho}</td>
+        <td>${lead.data}</td>
+        <td>${lead.hora}</td>
+        <td>${lead.utm_source || "-"}</td>
+        <td>${lead.utm_campaign || "-"}</td>
+        <td class="truncate">${lead.fbclid ? lead.fbclid.substring(0, 12) + "..." : "-"}</td>
+      `;
+      tableBody.prepend(row);
+    }
+
+    // Listener Realtime
+    supabase
+      .channel("realtime:leads")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
+        const lead = payload.new;
+        addRow(lead);
+
+        if (lead.operador === "IGOR") {
+          igorCount++;
+          countIgor.textContent = igorCount;
+        } else if (lead.operador === "JULIO") {
+          julioCount++;
+          countJulio.textContent = julioCount;
+        }
+      })
+      .subscribe();
+
+    loadInitialData();
+  </script>
+</body>
+</html>
