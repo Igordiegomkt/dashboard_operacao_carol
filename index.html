@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📊 Operação Carol - Dashboard Realtime</title>
+  <title>📊 Operação Carol - Dashboard Diário</title>
 
   <!-- Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -21,11 +21,13 @@
     select,input[type="date"] { background:#1e293b; color:#f1f5f9; border:none; border-radius:0.5rem; padding:0.4rem 0.7rem; }
     button { background:#2563eb; color:white; border:none; border-radius:0.5rem; padding:0.4rem 1rem; font-weight:600; }
     button:hover { background:#1d4ed8; }
+    #clock { font-size:1.1rem; color:#94a3b8; margin-bottom:1rem; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-6">
-  <h1 class="text-3xl font-bold mb-4">📊 Painel Realtime — Operação Carol</h1>
-  <p class="text-slate-400 mb-8">Monitoramento em tempo real — Leads via Supabase</p>
+  <h1 class="text-3xl font-bold mb-1">📊 Painel Realtime — Operação Carol</h1>
+  <div id="clock">🕒 Atualizando...</div>
+  <p class="text-slate-400 mb-8">Mostrando apenas os leads do dia atual (zera à meia-noite)</p>
 
   <!-- Filtros -->
   <div class="flex flex-wrap gap-4 mb-8 justify-center">
@@ -52,18 +54,18 @@
   <!-- Cards -->
   <div class="grid grid-cols-2 gap-6 mb-8 w-full max-w-3xl">
     <div class="card text-center">
-      <div class="title">Total IGOR</div>
+      <div class="title">Total IGOR (hoje)</div>
       <div id="countIgor" class="number">0</div>
     </div>
     <div class="card text-center">
-      <div class="title">Total JULIO</div>
+      <div class="title">Total JULIO (hoje)</div>
       <div id="countJulio" class="number text-green-400">0</div>
     </div>
   </div>
 
   <!-- Tabela -->
   <div class="card w-full max-w-5xl overflow-x-auto">
-    <div class="title mb-4">📥 Últimos Leads</div>
+    <div class="title mb-4">📥 Leads do dia</div>
     <table id="leadsTable">
       <thead>
         <tr>
@@ -92,14 +94,27 @@
     const filterOperador = document.getElementById("filterOperador");
     const applyFilters = document.getElementById("applyFilters");
     const clearFilters = document.getElementById("clearFilters");
+    const clock = document.getElementById("clock");
 
     let allLeads = [];
     let igorCount = 0, julioCount = 0;
 
+    function atualizarRelogio() {
+      const agora = new Date();
+      const opcoes = { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" };
+      const hora = agora.toLocaleTimeString("pt-BR", opcoes);
+      const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      clock.textContent = `📅 ${data} | 🕒 ${hora} (Horário de Brasília)`;
+    }
+    setInterval(atualizarRelogio, 1000);
+    atualizarRelogio();
+
     async function loadInitialData() {
+      const hoje = new Date().toLocaleDateString("pt-BR");
       const { data, error } = await supabase
         .from("PRESSEL_DADOS_TRAFEGO_PJTCAROL")
         .select("*")
+        .eq("data", hoje) // apenas leads do dia atual
         .order("id", { ascending: false })
         .limit(200);
       if (error) { console.error("Erro ao carregar:", error); return; }
@@ -151,9 +166,12 @@
       .channel("realtime:leads")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
         const lead = payload.new;
-        allLeads.push(lead);
-        if (!filterDate.value && !filterOperador.value) addRowRealtime(lead);
-        updateCounts(allLeads);
+        const hoje = new Date().toLocaleDateString("pt-BR");
+        if (lead.data === hoje) { // só adiciona se for do dia atual
+          allLeads.push(lead);
+          if (!filterDate.value && !filterOperador.value) addRowRealtime(lead);
+          updateCounts(allLeads);
+        }
       })
       .subscribe();
 
