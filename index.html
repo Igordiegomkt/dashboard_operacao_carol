@@ -10,110 +10,52 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body {
-      background-color: #0f172a;
-      color: #f1f5f9;
-      font-family: 'Inter', sans-serif;
-    }
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 1rem;
-      padding: 1.5rem;
-      transition: all 0.3s ease;
-    }
-    .card:hover {
-      transform: scale(1.01);
-      box-shadow: 0 0 25px rgba(56, 189, 248, 0.1);
-    }
-    .title {
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-    .number {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: #38bdf8;
-    }
-    .clock {
-      font-size: 1rem;
-      color: #38bdf8;
-      font-weight: 600;
-    }
-    /* Ícone e pop-up do filtro */
+    body { background-color:#0f172a; color:#f1f5f9; font-family:'Inter',sans-serif; }
+    .card { background:rgba(255,255,255,0.05); border-radius:1rem; padding:1.5rem; transition:.3s; }
+    .card:hover { transform:scale(1.01); box-shadow:0 0 25px rgba(56,189,248,.1); }
+    .title { font-size:1.4rem; font-weight:700; margin-bottom:.5rem; }
+    .number { font-size:2.5rem; font-weight:800; color:#38bdf8; }
+    table { width:100%; margin-top:1rem; border-collapse:collapse; }
+    th,td { padding:.6rem; border-bottom:1px solid rgba(255,255,255,.1); text-align:left; }
+    th { color:#94a3b8; font-weight:600; }
+    tr:hover { background-color:rgba(255,255,255,.04); }
+    button { background:#38bdf8; color:#0f172a; padding:.5rem 1rem; border-radius:.4rem; font-weight:600; font-size:.9rem; }
+    button:hover { background:#0ea5e9; }
+    .header { display:flex; flex-direction:column; align-items:center; gap:.3rem; margin-bottom:1rem; text-align:center; }
+    .clock { font-size:1rem; color:#38bdf8; font-weight:600; }
+
+    /* Filtro minimalista */
     .filter-icon {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      background: rgba(56,189,248,0.15);
-      border: 1px solid rgba(56,189,248,0.4);
-      border-radius: 50%;
-      width: 38px;
-      height: 38px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #38bdf8;
-      cursor: pointer;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 0 10px rgba(56,189,248,0.1);
-      transition: all 0.3s ease;
-      z-index: 1000;
+      position:fixed; top:1rem; right:1rem; width:38px; height:38px;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(56,189,248,.15); color:#38bdf8; border:1px solid rgba(56,189,248,.4);
+      border-radius:50%; cursor:pointer; backdrop-filter:blur(6px);
+      box-shadow:0 0 10px rgba(56,189,248,.1); transition:.3s; z-index:1000;
     }
-    .filter-icon:hover { background: rgba(56,189,248,0.3); }
+    .filter-icon:hover { background:rgba(56,189,248,.3); }
     .filter-popup {
-      position: fixed;
-      top: 4rem;
-      right: 1rem;
-      background: rgba(15,23,42,0.95);
-      border: 1px solid rgba(56,189,248,0.3);
-      border-radius: 0.75rem;
-      padding: 0.8rem 1rem;
-      width: 220px;
-      color: #f1f5f9;
-      font-size: 0.85rem;
-      display: none;
-      flex-direction: column;
-      gap: 0.4rem;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 0 15px rgba(56,189,248,0.15);
-      z-index: 999;
-      animation: fadeIn 0.2s ease;
+      position:fixed; top:4rem; right:1rem; width:220px; display:none; flex-direction:column; gap:.4rem;
+      background:rgba(15,23,42,.95); border:1px solid rgba(56,189,248,.3); border-radius:.75rem;
+      padding:.8rem 1rem; color:#f1f5f9; font-size:.85rem; backdrop-filter:blur(10px);
+      box-shadow:0 0 15px rgba(56,189,248,.15); z-index:999; animation:fadeIn .2s ease;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:translateY(0)} }
+    .filter-popup label { font-size:.75rem; color:#94a3b8; }
+    .filter-popup input,.filter-popup select {
+      background:#1e293b; border:1px solid #334155; border-radius:.4rem; padding:.3rem .5rem; color:#f1f5f9; font-size:.8rem; width:100%;
     }
-    .filter-popup input, .filter-popup select {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.4rem;
-      padding: 0.3rem 0.5rem;
-      color: #f1f5f9;
-      font-size: 0.8rem;
-      width: 100%;
-    }
-    .filter-popup button {
-      margin-top: 0.2rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.3rem;
-      border-radius: 0.4rem;
-    }
+    .filter-popup button { margin-top:.2rem; font-size:.75rem; font-weight:600; padding:.3rem; border-radius:.4rem; }
   </style>
 </head>
 
 <body class="min-h-screen flex flex-col items-center p-6">
-
-  <div class="text-center mb-6">
-    <h1 class="text-3xl font-extrabold text-cyan-400">🖥 Dashboard Operação de Tráfego Carol - 2</h1>
+  <div class="header">
+    <h1 class="text-3xl font-extrabold text-cyan-400">🚦 Dashboard Operação de Tráfego Carol - 2</h1>
     <p class="clock" id="clock">🕒 Carregando hora...</p>
   </div>
 
-  <!-- 🔍 Ícone do filtro -->
+  <!-- Filtro -->
   <div class="filter-icon" id="filterToggle" title="Filtrar 🔍">🔍</div>
-
-  <!-- Pop-up do filtro -->
   <div class="filter-popup" id="filterPopup">
     <label>📅 Data</label>
     <input type="text" id="filterDate" placeholder="dd/mm/aaaa" />
@@ -123,11 +65,11 @@
       <option value="IGOR">IGOR</option>
       <option value="JULIO">JULIO</option>
     </select>
-    <button id="applyFilter" style="background-color:#38bdf8;color:#0f172a;">Filtrar</button>
-    <button id="clearFilter" style="background-color:#475569;color:white;">Limpar</button>
+    <button id="applyFilter" style="background:#38bdf8;color:#0f172a;">Filtrar</button>
+    <button id="clearFilter" style="background:#475569;color:white;">Limpar</button>
   </div>
 
-  <!-- Cards Totais -->
+  <!-- Cards -->
   <div class="grid grid-cols-3 gap-6 mb-10 w-full max-w-5xl mt-8">
     <div class="card text-center">
       <div class="title">Operador IGOR</div>
@@ -171,10 +113,10 @@
   <p class="text-slate-500 text-sm mt-6">© Operação Carol — Realtime Dashboard</p>
 
   <script>
-    // Relógio SP
+    // Relógio (SP)
     setInterval(() => {
-      const options = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-      document.getElementById('clock').textContent = '🕒 ' + new Intl.DateTimeFormat('pt-BR', options).format(new Date());
+      const opt = { timeZone:'America/Sao_Paulo', hour:'2-digit', minute:'2-digit', second:'2-digit' };
+      document.getElementById('clock').textContent = '🕒 ' + new Intl.DateTimeFormat('pt-BR', opt).format(new Date());
     }, 1000);
 
     // Supabase
@@ -183,6 +125,7 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4"
     );
 
+    // DOM
     const countIgor = document.getElementById("countIgor");
     const countJulio = document.getElementById("countJulio");
     const countTotal = document.getElementById("countTotal");
@@ -195,22 +138,49 @@
     const applyFilter = document.getElementById("applyFilter");
     const clearFilter = document.getElementById("clearFilter");
 
-    let allData = [], showingAll = false, charts = {}, currentFilter = { date: null, operador: "Todos" };
+    // Estado
+    let allData = [];
+    let showingAll = false;
+    let charts = {};
+    let currentFilter = { date: null, operador: "Todos" };
+    const seenIds = new Set(); // 🔒 anti-duplicidade
 
-    // Abrir/fechar filtro
+    // UI filtro
     filterToggle.addEventListener("click", () => {
-      filterPopup.style.display = filterPopup.style.display === "flex" ? "none" : "flex";
+      filterPopup.style.display = (filterPopup.style.display === "flex" ? "none" : "flex");
     });
 
     async function loadData(dateFilter = null, operador = "Todos") {
       let query = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*");
+
+      // padrão = hoje
       if (dateFilter) query = query.eq("data", dateFilter);
       else query = query.eq("data", new Date().toLocaleDateString("pt-BR"));
+
       if (operador !== "Todos") query = query.eq("operador", operador);
+
       const { data, error } = await query.order("id", { ascending: false });
-      if (error) return console.error(error);
-      allData = data || [];
-      renderTable(); updateCounts(); updateCharts();
+      if (error) { console.error(error); return; }
+
+      // atualiza filtro ativo (✅ CORREÇÃO)
+      currentFilter = { date: dateFilter || null, operador };
+
+      // reseta cache e popula
+      allData = [];
+      seenIds.clear();
+      (data || []).forEach(pushIfNotSeen);
+
+      renderTable();
+      updateCounts();
+      updateCharts();
+    }
+
+    // 🔁 push com dedupe por id
+    function pushIfNotSeen(lead) {
+      const key = lead.id ?? `${lead.operador}-${lead.data}-${lead.hora}-${lead.fbclid||''}`;
+      if (seenIds.has(key)) return;
+      seenIds.add(key);
+      allData.push(lead);
     }
 
     function updateCounts() {
@@ -223,15 +193,16 @@
 
     function renderTable() {
       tableBody.innerHTML = "";
-      const display = showingAll ? allData : allData.slice(0, 10);
-      display.forEach(l => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
+      const list = (showingAll ? allData : allData.slice(0, 10));
+      // como allData está DESC, vamos mostrar do mais novo para o mais antigo:
+      list.forEach(l => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
           <td>${l.operador}</td><td>${l.caminho}</td><td>${l.data}</td><td>${l.hora}</td>
           <td>${l.utm_source || "-"}</td><td>${l.utm_campaign || "-"}</td>
           <td>${l.utm_content || "-"}</td><td>${l.utm_term || "-"}</td>
           <td>${l.fbclid ? l.fbclid.substring(0, 10) + "..." : "-"}</td>`;
-        tableBody.appendChild(row);
+        tableBody.appendChild(tr);
       });
     }
 
@@ -241,45 +212,83 @@
       renderTable();
     });
 
-    applyFilter.addEventListener("click", () => loadData(filterDate.value.trim() || null, filterOperador.value));
-    clearFilter.addEventListener("click", () => { filterDate.value = ""; filterOperador.value = "Todos"; loadData(); });
+    applyFilter.addEventListener("click", () => {
+      const d = (filterDate.value.trim() || null);
+      const op = filterOperador.value;
+      loadData(d, op);
+      filterPopup.style.display = "none";
+    });
+
+    clearFilter.addEventListener("click", () => {
+      filterDate.value = ""; filterOperador.value = "Todos";
+      loadData(null, "Todos");
+      filterPopup.style.display = "none";
+    });
 
     function groupCount(key) {
-      const counts = {};
+      const map = {};
       allData.forEach(l => {
         const k = (l[key] && l[key] !== "Indefinido" && l[key].trim() !== "") ? l[key] : null;
-        if (k) counts[k] = (counts[k] || 0) + 1;
+        if (k) map[k] = (map[k] || 0) + 1;
       });
-      return { labels: Object.keys(counts), values: Object.values(counts) };
+      return { labels:Object.keys(map), values:Object.values(map) };
     }
 
     function updateCharts() {
-      const dataSets = {
+      const sets = {
         chartSource: groupCount("utm_source"),
         chartCampaign: groupCount("utm_campaign"),
         chartContent: groupCount("utm_content"),
         chartTerm: groupCount("utm_term")
       };
-      Object.entries(dataSets).forEach(([id, d]) => {
+      Object.entries(sets).forEach(([id, d]) => {
         if (charts[id]) charts[id].destroy();
         charts[id] = new Chart(document.getElementById(id), {
-          type: "bar",
-          data: { labels: d.labels, datasets: [{ data: d.values, backgroundColor: "#38bdf8", hoverBackgroundColor: "#7dd3fc" }] },
-          options: { responsive: true, indexAxis: "y", plugins: { legend: { display: false } } }
+          type:"bar",
+          data:{ labels:d.labels, datasets:[{ data:d.values, backgroundColor:"#38bdf8", hoverBackgroundColor:"#7dd3fc" }] },
+          options:{ responsive:true, indexAxis:"y", plugins:{ legend:{ display:false } } }
         });
       });
     }
 
+    // 🔔 Realtime que respeita filtro + sem duplicar
     supabase
       .channel("realtime:leads")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
         const l = payload.new;
+
+        // respeita filtro atual (✅ CORREÇÃO)
+        const matchDate = !currentFilter.date || l.data === currentFilter.date;
+        const matchOp = (currentFilter.operador === "Todos") || (l.operador === currentFilter.operador);
+        if (!matchDate || !matchOp) return;
+
+        // dedupe
+        const key = l.id ?? `${l.operador}-${l.data}-${l.hora}-${l.fbclid||''}`;
+        if (seenIds.has(key)) return;
+        seenIds.add(key);
+
+        // push no início para “últimos leads” e contagens
         allData.unshift(l);
-        updateCounts(); renderTable(); updateCharts();
+
+        // atualiza UI
+        updateCounts();
+        // linha nova no topo:
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${l.operador}</td><td>${l.caminho}</td><td>${l.data}</td><td>${l.hora}</td>
+          <td>${l.utm_source || "-"}</td><td>${l.utm_campaign || "-"}</td>
+          <td>${l.utm_content || "-"}</td><td>${l.utm_term || "-"}</td>
+          <td>${l.fbclid ? l.fbclid.substring(0, 10) + "..." : "-"}</td>`;
+        tableBody.prepend(tr);
+        updateCharts();
       })
       .subscribe();
 
-    loadData();
+    // start
+    (function init(){
+      // default = hoje, sem operador
+      loadData();
+    })();
   </script>
 </body>
 </html>
