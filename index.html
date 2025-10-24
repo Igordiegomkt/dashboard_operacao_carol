@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📊 Operação Carol - Dashboard Realtime</title>
+  <title>📊 Dashboard Operação de Tráfego Carol - 2</title>
 
   <!-- Supabase + Tailwind + Chart.js -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -11,56 +11,127 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body { background-color: #0f172a; color: #f1f5f9; font-family: Inter, sans-serif; }
-    .card { background: rgba(255,255,255,0.05); border-radius: 1rem; padding: 1.5rem; }
-    .title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .number { font-size: 2.5rem; font-weight: 800; color: #38bdf8; }
-    table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
-    th, td { padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; }
+    body {
+      background-color: #0f172a;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      transform: scale(1.01);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.1);
+    }
+    .title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #f8fafc;
+    }
+    .number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+    table {
+      width: 100%;
+      margin-top: 1rem;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.6rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      text-align: left;
+    }
     th { color: #94a3b8; font-weight: 600; }
-    canvas { max-width: 100%; }
+    tr:hover { background-color: rgba(255,255,255,0.04); }
+    button {
+      background-color: #38bdf8;
+      color: #0f172a;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+    }
+    button:hover { background-color: #0ea5e9; }
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+    .clock {
+      font-size: 1.25rem;
+      color: #38bdf8;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    input, select {
+      background-color: #1e293b;
+      color: #f1f5f9;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
   </style>
 </head>
 
 <body class="min-h-screen flex flex-col items-center p-6">
-  <h1 class="text-3xl font-bold mb-4 text-cyan-400">📊 Painel Realtime — Operação Carol</h1>
-  <p class="text-slate-400 mb-8">Atualizado automaticamente em tempo real via Supabase Realtime</p>
 
-  <!-- Cards -->
-  <div class="grid grid-cols-2 gap-6 mb-8 w-full max-w-3xl">
+  <!-- Cabeçalho -->
+  <div class="header">
+    <h1 class="text-4xl font-extrabold text-cyan-400 drop-shadow-md">
+      🚦 Dashboard Operação de Tráfego Carol - 2
+    </h1>
+    <p class="clock" id="clock">Carregando hora...</p>
+    <p class="text-slate-400 text-sm">Fuso horário: América/São_Paulo — atualização em tempo real</p>
+  </div>
+
+  <!-- 🔍 Filtros -->
+  <div class="card w-full max-w-4xl mb-10 flex flex-col sm:flex-row gap-4 items-center justify-center">
+    <div class="flex flex-col items-start">
+      <label class="text-sm text-slate-300 mb-1">Data (dd/mm/aaaa)</label>
+      <input type="text" id="filterDate" placeholder="Ex: 24/10/2025" />
+    </div>
+    <div class="flex flex-col items-start">
+      <label class="text-sm text-slate-300 mb-1">Operador</label>
+      <select id="filterOperador">
+        <option value="Todos">Todos</option>
+        <option value="IGOR">IGOR</option>
+        <option value="JULIO">JULIO</option>
+      </select>
+    </div>
+    <button id="applyFilter">Filtrar</button>
+    <button id="clearFilter" class="bg-slate-600 hover:bg-slate-500 text-white">Limpar</button>
+  </div>
+
+  <!-- Cards Totais -->
+  <div class="grid grid-cols-3 gap-6 mb-10 w-full max-w-5xl">
     <div class="card text-center">
-      <div class="title">Total IGOR</div>
+      <div class="title">Operador IGOR</div>
       <div id="countIgor" class="number">0</div>
     </div>
     <div class="card text-center">
-      <div class="title">Total JULIO</div>
+      <div class="title">Operador JULIO</div>
       <div id="countJulio" class="number text-green-400">0</div>
+    </div>
+    <div class="card text-center">
+      <div class="title">🔥 Total do Dia</div>
+      <div id="countTotal" class="number text-yellow-400">0</div>
     </div>
   </div>
 
-  <!-- Tabela -->
-  <div class="card w-full max-w-5xl overflow-x-auto mb-10">
-    <div class="title mb-4">📥 Últimos Leads</div>
-    <table id="leadsTable">
-      <thead>
-        <tr>
-          <th>Operador</th>
-          <th>Caminho</th>
-          <th>Data</th>
-          <th>Hora</th>
-          <th>utm_source</th>
-          <th>utm_campaign</th>
-          <th>utm_content</th>
-          <th>utm_term</th>
-          <th>fbclid</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
-
   <!-- Gráficos -->
-  <div class="w-full max-w-6xl grid grid-cols-2 gap-8 mb-10">
+  <div class="w-full max-w-6xl grid grid-cols-2 gap-8 mb-12">
     <div class="card">
       <div class="title">📈 Origem (utm_source)</div>
       <canvas id="chartSource"></canvas>
@@ -79,9 +150,42 @@
     </div>
   </div>
 
+  <!-- Tabela Últimos Leads -->
+  <div class="card w-full max-w-6xl overflow-x-auto mb-10">
+    <div class="flex justify-between items-center mb-4">
+      <div class="title">📥 Últimos Leads</div>
+      <button id="toggleLeads">Mostrar mais</button>
+    </div>
+    <table id="leadsTable">
+      <thead>
+        <tr>
+          <th>Operador</th>
+          <th>Caminho</th>
+          <th>Data</th>
+          <th>Hora</th>
+          <th>utm_source</th>
+          <th>utm_campaign</th>
+          <th>utm_content</th>
+          <th>utm_term</th>
+          <th>fbclid</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
   <p class="text-slate-500 text-sm mt-6">© Operação Carol — Realtime Dashboard</p>
 
   <script>
+    // 🕒 Relógio São Paulo
+    function updateClock() {
+      const options = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      document.getElementById('clock').textContent = '🕒 ' + new Intl.DateTimeFormat('pt-BR', options).format(new Date());
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 🧩 Supabase
     const SUPABASE_URL = "https://atexvoxukvaqittpqkov.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -89,34 +193,66 @@
     const tableBody = document.getElementById("tableBody");
     const countIgor = document.getElementById("countIgor");
     const countJulio = document.getElementById("countJulio");
+    const countTotal = document.getElementById("countTotal");
+    const toggleLeads = document.getElementById("toggleLeads");
+    const filterDate = document.getElementById("filterDate");
+    const filterOperador = document.getElementById("filterOperador");
+    const applyFilter = document.getElementById("applyFilter");
+    const clearFilter = document.getElementById("clearFilter");
 
-    let igorCount = 0, julioCount = 0;
+    let igorCount = 0, julioCount = 0, totalCount = 0;
     let allData = [];
     let charts = {};
+    let showingAll = false;
 
-    async function loadInitialData() {
-      const hoje = new Date().toLocaleDateString("pt-BR");
-      const { data, error } = await supabase
-        .from("PRESSEL_DADOS_TRAFEGO_PJTCAROL")
-        .select("*")
-        .eq("data", hoje)
-        .order("id", { ascending: false })
-        .limit(100);
+    async function loadData(dateFilter = null, operador = "Todos") {
+      let query = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*");
 
-      if (error) { console.error("Erro ao carregar dados:", error); return; }
+      if (dateFilter) query = query.eq("data", dateFilter);
+      else query = query.eq("data", new Date().toLocaleDateString("pt-BR"));
+
+      if (operador !== "Todos") query = query.eq("operador", operador);
+
+      const { data, error } = await query.order("id", { ascending: false }).limit(100);
+      if (error) return console.error(error);
 
       allData = data;
-      tableBody.innerHTML = "";
-      data.reverse().forEach(addRow);
+      renderTable();
       updateCounts();
       updateCharts();
     }
 
+    function renderTable() {
+      tableBody.innerHTML = "";
+      const displayData = showingAll ? allData : allData.slice(0, 10);
+      displayData.forEach(addRow);
+    }
+
+    toggleLeads.addEventListener("click", () => {
+      showingAll = !showingAll;
+      toggleLeads.textContent = showingAll ? "Mostrar menos" : "Mostrar mais";
+      renderTable();
+    });
+
+    applyFilter.addEventListener("click", () => {
+      const date = filterDate.value.trim();
+      const operador = filterOperador.value;
+      loadData(date || null, operador);
+    });
+
+    clearFilter.addEventListener("click", () => {
+      filterDate.value = "";
+      filterOperador.value = "Todos";
+      loadData();
+    });
+
     function updateCounts() {
       igorCount = allData.filter(l => l.operador === "IGOR").length;
       julioCount = allData.filter(l => l.operador === "JULIO").length;
+      totalCount = allData.length;
       countIgor.textContent = igorCount;
       countJulio.textContent = julioCount;
+      countTotal.textContent = totalCount;
     }
 
     function addRow(lead) {
@@ -132,7 +268,7 @@
         <td>${lead.utm_term || "-"}</td>
         <td>${lead.fbclid ? lead.fbclid.substring(0, 10) + "..." : "-"}</td>
       `;
-      tableBody.prepend(row);
+      tableBody.appendChild(row);
     }
 
     function groupCount(key) {
@@ -166,6 +302,7 @@
           },
           options: {
             responsive: true,
+            indexAxis: "y",
             scales: {
               x: { ticks: { color: "#f1f5f9" } },
               y: { ticks: { color: "#f1f5f9" } }
@@ -184,14 +321,14 @@
       .channel("realtime:leads")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
         const lead = payload.new;
-        allData.push(lead);
-        addRow(lead);
+        allData.unshift(lead);
         updateCounts();
+        renderTable();
         updateCharts();
       })
       .subscribe();
 
-    loadInitialData();
+    loadData();
   </script>
 </body>
 </html>
