@@ -62,7 +62,7 @@
       flex-direction: column;
       align-items: center;
       gap: 0.5rem;
-      margin-bottom: 2.5rem;
+      margin-bottom: 1rem;
       text-align: center;
     }
     .clock {
@@ -70,6 +70,26 @@
       color: #38bdf8;
       font-weight: 600;
       letter-spacing: 0.5px;
+    }
+    .filter-bar {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.75rem;
+      margin-bottom: 2rem;
+      font-weight: 600;
+      text-align: center;
+      width: 100%;
+      max-width: 600px;
+      transition: all 0.3s ease;
+    }
+    .filter-active {
+      background-color: rgba(14, 165, 233, 0.2);
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+    }
+    .filter-none {
+      background-color: rgba(100,116,139,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(100,116,139,0.2);
     }
     input, select {
       background-color: #1e293b;
@@ -94,6 +114,11 @@
     </h1>
     <p class="clock" id="clock">Carregando hora...</p>
     <p class="text-slate-400 text-sm">Fuso horário: América/São_Paulo — atualização em tempo real</p>
+  </div>
+
+  <!-- Barra de Filtro Ativo -->
+  <div id="filterStatus" class="filter-bar filter-none">
+    🔍 Nenhum filtro ativo — exibindo dados em tempo real
   </div>
 
   <!-- 🔍 Filtros -->
@@ -125,7 +150,7 @@
       <div id="countJulio" class="number text-green-400">0</div>
     </div>
     <div class="card text-center">
-      <div class="title">🔥 Total do Dia</div>
+      <div class="title">🔥 Total</div>
       <div id="countTotal" class="number text-yellow-400">0</div>
     </div>
   </div>
@@ -199,11 +224,13 @@
     const filterOperador = document.getElementById("filterOperador");
     const applyFilter = document.getElementById("applyFilter");
     const clearFilter = document.getElementById("clearFilter");
+    const filterStatus = document.getElementById("filterStatus");
 
     let igorCount = 0, julioCount = 0, totalCount = 0;
     let allData = [];
     let charts = {};
     let showingAll = false;
+    let currentFilter = { date: null, operador: "Todos" };
 
     async function loadData(dateFilter = null, operador = "Todos") {
       let query = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*");
@@ -217,9 +244,21 @@
       if (error) return console.error(error);
 
       allData = data;
+      currentFilter = { date: dateFilter, operador };
+      updateFilterStatus();
       renderTable();
       updateCounts();
       updateCharts();
+    }
+
+    function updateFilterStatus() {
+      if (currentFilter.date || currentFilter.operador !== "Todos") {
+        filterStatus.className = "filter-bar filter-active";
+        filterStatus.textContent = `🔎 Filtro ativo: ${currentFilter.date || 'Data Atual'} — ${currentFilter.operador}`;
+      } else {
+        filterStatus.className = "filter-bar filter-none";
+        filterStatus.textContent = "🔍 Nenhum filtro ativo — exibindo dados em tempo real";
+      }
     }
 
     function renderTable() {
@@ -271,16 +310,16 @@
       tableBody.appendChild(row);
     }
 
-    function groupCount(key) {
-      const counts = {};
-      allData.forEach(l => {
-        const k = l[key] || "Indefinido";
-        counts[k] = (counts[k] || 0) + 1;
-      });
-      return { labels: Object.keys(counts), values: Object.values(counts) };
-    }
-
     function updateCharts() {
+      const groupCount = (key) => {
+        const counts = {};
+        allData.forEach(l => {
+          const k = (l[key] && l[key] !== "Indefinido" && l[key].trim() !== "") ? l[key] : null;
+          if (k) counts[k] = (counts[k] || 0) + 1;
+        });
+        return { labels: Object.keys(counts), values: Object.values(counts) };
+      };
+
       const datasets = {
         chartSource: groupCount("utm_source"),
         chartCampaign: groupCount("utm_campaign"),
@@ -297,7 +336,10 @@
             datasets: [{
               label: "Leads",
               data: d.values,
-              backgroundColor: "#38bdf8"
+              backgroundColor: "#38bdf8",
+              hoverBackgroundColor: "#7dd3fc",
+              borderWidth: 1.5,
+              borderColor: "#0ea5e9"
             }]
           },
           options: {
@@ -309,22 +351,35 @@
             },
             plugins: {
               legend: { display: false },
-              tooltip: { titleColor: "#000", bodyColor: "#000" }
+              tooltip: {
+                backgroundColor: "#0ea5e9",
+                titleColor: "#fff",
+                bodyColor: "#fff",
+                bodyFont: { weight: "bold" },
+                titleFont: { weight: "bold" },
+                callbacks: {
+                  label: (context) => ` ${context.formattedValue} leads`
+                }
+              }
             }
           }
         });
       });
     }
 
-    // Realtime listener
     supabase
       .channel("realtime:leads")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
         const lead = payload.new;
-        allData.unshift(lead);
-        updateCounts();
-        renderTable();
-        updateCharts();
+        if (
+          (!currentFilter.date || lead.data === currentFilter.date) &&
+          (currentFilter.operador === "Todos" || lead.operador === currentFilter.operador)
+        ) {
+          allData.unshift(lead);
+          updateCounts();
+          renderTable();
+          updateCharts();
+        }
       })
       .subscribe();
 
