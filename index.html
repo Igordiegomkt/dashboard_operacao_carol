@@ -138,14 +138,10 @@
     });
 
     async function getCountFromDB({ date, operador = null }) {
-      let q = supabase
-        .from("PRESSEL_DADOS_TRAFEGO_PJTCAROL")
-        .select("*", { count: "exact", head: true });
-
+      let q = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*", { count: "exact", head: true });
       const targetDate = date || new Date().toLocaleDateString("pt-BR");
       q = q.eq("data", targetDate);
       if (operador) q = q.eq("operador", operador);
-
       const { count } = await q;
       return count || 0;
     }
@@ -251,6 +247,23 @@
         await updateCounts();
       })
       .subscribe();
+
+    // 🕛 Reset automático à meia-noite (fuso São Paulo)
+    let lastDate = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      .format(new Date());
+    setInterval(() => {
+      const nowDate = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' })
+        .format(new Date());
+      if (nowDate !== lastDate) {
+        console.log("⏰ Virada de dia detectada! Resetando dashboard...");
+        lastDate = nowDate;
+        allData = [];
+        tableBody.innerHTML = "";
+        Object.values(charts).forEach(ch => ch.destroy());
+        charts = {};
+        loadData(); // recarrega com data nova
+      }
+    }, 60 * 1000);
 
     loadData();
   </script>
