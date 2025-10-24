@@ -35,92 +35,96 @@
       font-weight: 800;
       color: #38bdf8;
     }
-    table {
-      width: 100%;
-      margin-top: 1rem;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 0.6rem;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      text-align: left;
-    }
-    th { color: #94a3b8; font-weight: 600; }
-    tr:hover { background-color: rgba(255,255,255,0.04); }
-    button {
-      background-color: #38bdf8;
-      color: #0f172a;
-      padding: 0.5rem 1rem;
-      border-radius: 0.4rem;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    button:hover { background-color: #0ea5e9; }
-    .header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.3rem;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
     .clock {
       font-size: 1rem;
       color: #38bdf8;
       font-weight: 600;
     }
-    /* Filtro flutuante minimalista */
-    .filter-panel {
+    /* Ícone e pop-up do filtro */
+    .filter-icon {
       position: fixed;
-      top: 1.5rem;
-      right: 1.5rem;
-      background: rgba(15,23,42,0.85);
+      top: 1rem;
+      right: 1rem;
+      background: rgba(56,189,248,0.15);
+      border: 1px solid rgba(56,189,248,0.4);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #38bdf8;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 10px rgba(56,189,248,0.1);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .filter-icon:hover { background: rgba(56,189,248,0.3); }
+    .filter-popup {
+      position: fixed;
+      top: 4rem;
+      right: 1rem;
+      background: rgba(15,23,42,0.95);
       border: 1px solid rgba(56,189,248,0.3);
       border-radius: 0.75rem;
-      padding: 0.8rem;
+      padding: 0.8rem 1rem;
+      width: 220px;
+      color: #f1f5f9;
       font-size: 0.85rem;
-      color: #e2e8f0;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 0 10px rgba(56,189,248,0.15);
+      display: none;
+      flex-direction: column;
+      gap: 0.4rem;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 15px rgba(56,189,248,0.15);
       z-index: 999;
+      animation: fadeIn 0.2s ease;
     }
-    .filter-panel label { font-size: 0.75rem; color: #94a3b8; }
-    .filter-panel input, .filter-panel select {
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .filter-popup input, .filter-popup select {
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 0.4rem;
       padding: 0.3rem 0.5rem;
       color: #f1f5f9;
-      font-size: 0.85rem;
-    }
-    .filter-panel button {
-      margin-top: 0.4rem;
-      width: 100%;
       font-size: 0.8rem;
+      width: 100%;
+    }
+    .filter-popup button {
+      margin-top: 0.2rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem;
+      border-radius: 0.4rem;
     }
   </style>
 </head>
 
 <body class="min-h-screen flex flex-col items-center p-6">
 
-  <!-- Cabeçalho -->
-  <div class="header">
-    <h1 class="text-3xl font-extrabold text-cyan-400">🚦 Dashboard Operação de Tráfego Carol - 2</h1>
+  <div class="text-center mb-6">
+    <h1 class="text-3xl font-extrabold text-cyan-400">🖥 Dashboard Operação de Tráfego Carol - 2</h1>
     <p class="clock" id="clock">🕒 Carregando hora...</p>
   </div>
 
-  <!-- Painel de Filtros (flutuante) -->
-  <div class="filter-panel">
-    <label>Data</label>
-    <input type="text" id="filterDate" placeholder="dd/mm/aaaa" class="w-full mb-2" />
-    <label>Operador</label>
-    <select id="filterOperador" class="w-full mb-2">
+  <!-- 🔍 Ícone do filtro -->
+  <div class="filter-icon" id="filterToggle" title="Filtrar 🔍">🔍</div>
+
+  <!-- Pop-up do filtro -->
+  <div class="filter-popup" id="filterPopup">
+    <label>📅 Data</label>
+    <input type="text" id="filterDate" placeholder="dd/mm/aaaa" />
+    <label>👤 Operador</label>
+    <select id="filterOperador">
       <option value="Todos">Todos</option>
       <option value="IGOR">IGOR</option>
       <option value="JULIO">JULIO</option>
     </select>
-    <button id="applyFilter">Filtrar</button>
-    <button id="clearFilter" class="bg-slate-700 hover:bg-slate-600 text-white mt-1">Limpar</button>
+    <button id="applyFilter" style="background-color:#38bdf8;color:#0f172a;">Filtrar</button>
+    <button id="clearFilter" style="background-color:#475569;color:white;">Limpar</button>
   </div>
 
   <!-- Cards Totais -->
@@ -141,25 +145,13 @@
 
   <!-- Gráficos -->
   <div class="w-full max-w-6xl grid grid-cols-2 gap-8 mb-12">
-    <div class="card">
-      <div class="title">📈 Origem (utm_source)</div>
-      <canvas id="chartSource"></canvas>
-    </div>
-    <div class="card">
-      <div class="title">📣 Campanhas (utm_campaign)</div>
-      <canvas id="chartCampaign"></canvas>
-    </div>
-    <div class="card">
-      <div class="title">🎨 Criativos (utm_content)</div>
-      <canvas id="chartContent"></canvas>
-    </div>
-    <div class="card">
-      <div class="title">📱 Terminais (utm_term)</div>
-      <canvas id="chartTerm"></canvas>
-    </div>
+    <div class="card"><div class="title">📈 Origem (utm_source)</div><canvas id="chartSource"></canvas></div>
+    <div class="card"><div class="title">📣 Campanhas (utm_campaign)</div><canvas id="chartCampaign"></canvas></div>
+    <div class="card"><div class="title">🎨 Criativos (utm_content)</div><canvas id="chartContent"></canvas></div>
+    <div class="card"><div class="title">📱 Terminais (utm_term)</div><canvas id="chartTerm"></canvas></div>
   </div>
 
-  <!-- Tabela Últimos Leads -->
+  <!-- Tabela -->
   <div class="card w-full max-w-6xl overflow-x-auto mb-10">
     <div class="flex justify-between items-center mb-4">
       <div class="title">📥 Últimos Leads</div>
@@ -168,15 +160,8 @@
     <table id="leadsTable">
       <thead>
         <tr>
-          <th>Operador</th>
-          <th>Caminho</th>
-          <th>Data</th>
-          <th>Hora</th>
-          <th>utm_source</th>
-          <th>utm_campaign</th>
-          <th>utm_content</th>
-          <th>utm_term</th>
-          <th>fbclid</th>
+          <th>Operador</th><th>Caminho</th><th>Data</th><th>Hora</th>
+          <th>utm_source</th><th>utm_campaign</th><th>utm_content</th><th>utm_term</th><th>fbclid</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -186,13 +171,11 @@
   <p class="text-slate-500 text-sm mt-6">© Operação Carol — Realtime Dashboard</p>
 
   <script>
-    // 🕒 Relógio SP
-    function updateClock() {
+    // Relógio SP
+    setInterval(() => {
       const options = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' };
       document.getElementById('clock').textContent = '🕒 ' + new Intl.DateTimeFormat('pt-BR', options).format(new Date());
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+    }, 1000);
 
     // Supabase
     const supabase = window.supabase.createClient(
@@ -205,6 +188,8 @@
     const countTotal = document.getElementById("countTotal");
     const tableBody = document.getElementById("tableBody");
     const toggleLeads = document.getElementById("toggleLeads");
+    const filterPopup = document.getElementById("filterPopup");
+    const filterToggle = document.getElementById("filterToggle");
     const filterDate = document.getElementById("filterDate");
     const filterOperador = document.getElementById("filterOperador");
     const applyFilter = document.getElementById("applyFilter");
@@ -212,21 +197,20 @@
 
     let allData = [], showingAll = false, charts = {}, currentFilter = { date: null, operador: "Todos" };
 
+    // Abrir/fechar filtro
+    filterToggle.addEventListener("click", () => {
+      filterPopup.style.display = filterPopup.style.display === "flex" ? "none" : "flex";
+    });
+
     async function loadData(dateFilter = null, operador = "Todos") {
       let query = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*");
-
       if (dateFilter) query = query.eq("data", dateFilter);
       else query = query.eq("data", new Date().toLocaleDateString("pt-BR"));
-
       if (operador !== "Todos") query = query.eq("operador", operador);
-
-      const { data, error } = await query.order("id", { ascending: false }); // 🔥 Removido .limit(100)
+      const { data, error } = await query.order("id", { ascending: false });
       if (error) return console.error(error);
-
       allData = data || [];
-      renderTable();
-      updateCounts();
-      updateCharts();
+      renderTable(); updateCounts(); updateCharts();
     }
 
     function updateCounts() {
@@ -240,19 +224,13 @@
     function renderTable() {
       tableBody.innerHTML = "";
       const display = showingAll ? allData : allData.slice(0, 10);
-      display.forEach(lead => {
+      display.forEach(l => {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${lead.operador}</td>
-          <td>${lead.caminho}</td>
-          <td>${lead.data}</td>
-          <td>${lead.hora}</td>
-          <td>${lead.utm_source || "-"}</td>
-          <td>${lead.utm_campaign || "-"}</td>
-          <td>${lead.utm_content || "-"}</td>
-          <td>${lead.utm_term || "-"}</td>
-          <td>${lead.fbclid ? lead.fbclid.substring(0, 10) + "..." : "-"}</td>
-        `;
+          <td>${l.operador}</td><td>${l.caminho}</td><td>${l.data}</td><td>${l.hora}</td>
+          <td>${l.utm_source || "-"}</td><td>${l.utm_campaign || "-"}</td>
+          <td>${l.utm_content || "-"}</td><td>${l.utm_term || "-"}</td>
+          <td>${l.fbclid ? l.fbclid.substring(0, 10) + "..." : "-"}</td>`;
         tableBody.appendChild(row);
       });
     }
@@ -264,11 +242,7 @@
     });
 
     applyFilter.addEventListener("click", () => loadData(filterDate.value.trim() || null, filterOperador.value));
-    clearFilter.addEventListener("click", () => {
-      filterDate.value = "";
-      filterOperador.value = "Todos";
-      loadData();
-    });
+    clearFilter.addEventListener("click", () => { filterDate.value = ""; filterOperador.value = "Todos"; loadData(); });
 
     function groupCount(key) {
       const counts = {};
@@ -286,7 +260,6 @@
         chartContent: groupCount("utm_content"),
         chartTerm: groupCount("utm_term")
       };
-
       Object.entries(dataSets).forEach(([id, d]) => {
         if (charts[id]) charts[id].destroy();
         charts[id] = new Chart(document.getElementById(id), {
@@ -300,11 +273,9 @@
     supabase
       .channel("realtime:leads")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
-        const lead = payload.new;
-        allData.unshift(lead);
-        updateCounts();
-        renderTable();
-        updateCharts();
+        const l = payload.new;
+        allData.unshift(l);
+        updateCounts(); renderTable(); updateCharts();
       })
       .subscribe();
 
