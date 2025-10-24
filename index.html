@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📊 Dashboard Operação de Tráfego Carol - 2</title>
 
+  <!-- Supabase + Tailwind + Chart.js -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,7 +14,7 @@
     body { background-color:#0f172a; color:#f1f5f9; font-family:'Inter',sans-serif; }
     .card { background:rgba(255,255,255,0.05); border-radius:1rem; padding:1.5rem; transition:.3s; }
     .card:hover { transform:scale(1.01); box-shadow:0 0 25px rgba(56,189,248,.1); }
-    .title { font-size:1.4rem; font-weight:700; margin-bottom:.5rem; }
+    .title { font-size:1.4rem; font-weight:700; margin-bottom:.5rem; color:#f8fafc; }
     .number { font-size:2.5rem; font-weight:800; color:#38bdf8; }
     table { width:100%; margin-top:1rem; border-collapse:collapse; }
     th,td { padding:.6rem; border-bottom:1px solid rgba(255,255,255,.1); text-align:left; }
@@ -71,18 +72,9 @@
 
   <!-- Cards -->
   <div class="grid grid-cols-3 gap-6 mb-10 w-full max-w-5xl mt-8">
-    <div class="card text-center">
-      <div class="title">Operador IGOR</div>
-      <div id="countIgor" class="number">0</div>
-    </div>
-    <div class="card text-center">
-      <div class="title">Operador JULIO</div>
-      <div id="countJulio" class="number text-green-400">0</div>
-    </div>
-    <div class="card text-center">
-      <div class="title">🔥 Total</div>
-      <div id="countTotal" class="number text-yellow-400">0</div>
-    </div>
+    <div class="card text-center"><div class="title">Operador IGOR</div><div id="countIgor" class="number">0</div></div>
+    <div class="card text-center"><div class="title">Operador JULIO</div><div id="countJulio" class="number text-green-400">0</div></div>
+    <div class="card text-center"><div class="title">🔥 Total</div><div id="countTotal" class="number text-yellow-400">0</div></div>
   </div>
 
   <!-- Gráficos -->
@@ -119,17 +111,16 @@
       document.getElementById('clock').textContent = '🕒 ' + new Intl.DateTimeFormat('pt-BR', opt).format(new Date());
     }, 1000);
 
-    // Supabase
+    // Supabase client
     const supabase = window.supabase.createClient(
       "https://atexvoxukvaqittpqkov.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4"
     );
 
-    // DOM
+    const tableBody = document.getElementById("tableBody");
     const countIgor = document.getElementById("countIgor");
     const countJulio = document.getElementById("countJulio");
     const countTotal = document.getElementById("countTotal");
-    const tableBody = document.getElementById("tableBody");
     const toggleLeads = document.getElementById("toggleLeads");
     const filterPopup = document.getElementById("filterPopup");
     const filterToggle = document.getElementById("filterToggle");
@@ -138,64 +129,58 @@
     const applyFilter = document.getElementById("applyFilter");
     const clearFilter = document.getElementById("clearFilter");
 
-    // Estado
-    let allData = [];
-    let showingAll = false;
-    let charts = {};
+    let allData = [], showingAll = false, charts = {};
     let currentFilter = { date: null, operador: "Todos" };
-    const seenIds = new Set(); // 🔒 anti-duplicidade
+    const seenIds = new Set();
 
-    // UI filtro
     filterToggle.addEventListener("click", () => {
       filterPopup.style.display = (filterPopup.style.display === "flex" ? "none" : "flex");
     });
 
-    async function loadData(dateFilter = null, operador = "Todos") {
-      let query = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*");
+    async function getCountFromDB({ date, operador = null }) {
+      let q = supabase
+        .from("PRESSEL_DADOS_TRAFEGO_PJTCAROL")
+        .select("*", { count: "exact", head: true });
 
-      // padrão = hoje
-      if (dateFilter) query = query.eq("data", dateFilter);
-      else query = query.eq("data", new Date().toLocaleDateString("pt-BR"));
+      const targetDate = date || new Date().toLocaleDateString("pt-BR");
+      q = q.eq("data", targetDate);
+      if (operador) q = q.eq("operador", operador);
 
-      if (operador !== "Todos") query = query.eq("operador", operador);
-
-      const { data, error } = await query.order("id", { ascending: false });
-      if (error) { console.error(error); return; }
-
-      // atualiza filtro ativo (✅ CORREÇÃO)
-      currentFilter = { date: dateFilter || null, operador };
-
-      // reseta cache e popula
-      allData = [];
-      seenIds.clear();
-      (data || []).forEach(pushIfNotSeen);
-
-      renderTable();
-      updateCounts();
-      updateCharts();
+      const { count } = await q;
+      return count || 0;
     }
 
-    // 🔁 push com dedupe por id
-    function pushIfNotSeen(lead) {
-      const key = lead.id ?? `${lead.operador}-${lead.data}-${lead.hora}-${lead.fbclid||''}`;
-      if (seenIds.has(key)) return;
-      seenIds.add(key);
-      allData.push(lead);
-    }
-
-    function updateCounts() {
-      const igor = allData.filter(l => l.operador === "IGOR").length;
-      const julio = allData.filter(l => l.operador === "JULIO").length;
+    async function updateCounts() {
+      const date = currentFilter?.date || null;
+      const [igor, julio, total] = await Promise.all([
+        getCountFromDB({ date, operador: "IGOR" }),
+        getCountFromDB({ date, operador: "JULIO" }),
+        getCountFromDB({ date })
+      ]);
       countIgor.textContent = igor;
       countJulio.textContent = julio;
-      countTotal.textContent = allData.length;
+      countTotal.textContent = total;
+    }
+
+    async function loadData(dateFilter = null, operador = "Todos") {
+      let query = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*");
+      const targetDate = dateFilter || new Date().toLocaleDateString("pt-BR");
+      query = query.eq("data", targetDate);
+      if (operador !== "Todos") query = query.eq("operador", operador);
+
+      const { data, error } = await query.order("id", { ascending: false }).limit(200);
+      if (error) { console.error(error); return; }
+
+      allData = data || [];
+      currentFilter = { date: dateFilter || null, operador };
+      renderTable();
+      updateCharts();
+      await updateCounts();
     }
 
     function renderTable() {
       tableBody.innerHTML = "";
-      const list = (showingAll ? allData : allData.slice(0, 10));
-      // como allData está DESC, vamos mostrar do mais novo para o mais antigo:
-      list.forEach(l => {
+      (showingAll ? allData : allData.slice(0, 10)).forEach(l => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${l.operador}</td><td>${l.caminho}</td><td>${l.data}</td><td>${l.hora}</td>
@@ -205,25 +190,6 @@
         tableBody.appendChild(tr);
       });
     }
-
-    toggleLeads.addEventListener("click", () => {
-      showingAll = !showingAll;
-      toggleLeads.textContent = showingAll ? "Mostrar menos" : "Mostrar mais";
-      renderTable();
-    });
-
-    applyFilter.addEventListener("click", () => {
-      const d = (filterDate.value.trim() || null);
-      const op = filterOperador.value;
-      loadData(d, op);
-      filterPopup.style.display = "none";
-    });
-
-    clearFilter.addEventListener("click", () => {
-      filterDate.value = ""; filterOperador.value = "Todos";
-      loadData(null, "Todos");
-      filterPopup.style.display = "none";
-    });
 
     function groupCount(key) {
       const map = {};
@@ -251,44 +217,42 @@
       });
     }
 
-    // 🔔 Realtime que respeita filtro + sem duplicar
+    toggleLeads.addEventListener("click", () => {
+      showingAll = !showingAll;
+      toggleLeads.textContent = showingAll ? "Mostrar menos" : "Mostrar mais";
+      renderTable();
+    });
+
+    applyFilter.addEventListener("click", () => {
+      loadData(filterDate.value.trim() || null, filterOperador.value);
+      filterPopup.style.display = "none";
+    });
+
+    clearFilter.addEventListener("click", () => {
+      filterDate.value = ""; filterOperador.value = "Todos";
+      loadData(); filterPopup.style.display = "none";
+    });
+
+    // Realtime
     supabase
       .channel("realtime:leads")
-      .on("postgres_changes", { event:"INSERT", schema:"public", table:"PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
+      .on("postgres_changes", { event:"INSERT", schema:"public", table:"PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, async payload => {
         const l = payload.new;
-
-        // respeita filtro atual (✅ CORREÇÃO)
         const matchDate = !currentFilter.date || l.data === currentFilter.date;
-        const matchOp = (currentFilter.operador === "Todos") || (l.operador === currentFilter.operador);
+        const matchOp = currentFilter.operador === "Todos" || l.operador === currentFilter.operador;
         if (!matchDate || !matchOp) return;
 
-        // dedupe
         const key = l.id ?? `${l.operador}-${l.data}-${l.hora}-${l.fbclid||''}`;
         if (seenIds.has(key)) return;
         seenIds.add(key);
-
-        // push no início para “últimos leads” e contagens
         allData.unshift(l);
-
-        // atualiza UI
-        updateCounts();
-        // linha nova no topo:
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${l.operador}</td><td>${l.caminho}</td><td>${l.data}</td><td>${l.hora}</td>
-          <td>${l.utm_source || "-"}</td><td>${l.utm_campaign || "-"}</td>
-          <td>${l.utm_content || "-"}</td><td>${l.utm_term || "-"}</td>
-          <td>${l.fbclid ? l.fbclid.substring(0, 10) + "..." : "-"}</td>`;
-        tableBody.prepend(tr);
+        renderTable();
         updateCharts();
+        await updateCounts();
       })
       .subscribe();
 
-    // start
-    (function init(){
-      // default = hoje, sem operador
-      loadData();
-    })();
+    loadData();
   </script>
 </body>
 </html>
