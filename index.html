@@ -1,195 +1,156 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📊 Operação Carol - Dashboard Diário</title>
+  <meta charset="UTF-8">
+  <title>Dashboard Tráfego Carol</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Supabase SDK -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Chart.js + Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-  <!-- TailwindCSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color:#0f172a; color:#f1f5f9; font-family:Inter,sans-serif; }
-    .card { background:rgba(255,255,255,0.05); border-radius:1rem; padding:1.5rem; }
-    .title { font-size:1.5rem; font-weight:700; margin-bottom:0.5rem; }
-    .number { font-size:2.5rem; font-weight:800; color:#38bdf8; }
-    table { width:100%; border-collapse:collapse; margin-top:1rem; }
-    th,td { padding:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; }
-    th { color:#94a3b8; font-weight:600; }
-    select,input[type="date"] { background:#1e293b; color:#f1f5f9; border:none; border-radius:0.5rem; padding:0.4rem 0.7rem; }
-    button { background:#2563eb; color:white; border:none; border-radius:0.5rem; padding:0.4rem 1rem; font-weight:600; }
-    button:hover { background:#1d4ed8; }
-    #clock { font-size:1.1rem; color:#94a3b8; margin-bottom:1rem; }
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      color: #00FF00;
+      text-shadow: 0 0 5px #00FF00;
+      margin-top: 20px;
+    }
+
+    .card {
+      background-color: #111;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+    }
+
+    canvas {
+      max-width: 100%;
+      margin-top: 15px;
+    }
+
+    .updated {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-6">
-  <h1 class="text-3xl font-bold mb-1">📊 Painel Realtime — Operação Carol</h1>
-  <div id="clock">🕒 Atualizando...</div>
-  <p class="text-slate-400 mb-8">Mostrando apenas os leads do dia atual (zera à meia-noite)</p>
+<body>
+  <h1>📊 Dashboard Tráfego Carol (Tempo Real)</h1>
 
-  <!-- Filtros -->
-  <div class="flex flex-wrap gap-4 mb-8 justify-center">
-    <div>
-      <label class="block text-sm text-slate-400 mb-1">Data</label>
-      <input type="date" id="filterDate">
-    </div>
-    <div>
-      <label class="block text-sm text-slate-400 mb-1">Operador</label>
-      <select id="filterOperador">
-        <option value="">Todos</option>
-        <option value="IGOR">IGOR</option>
-        <option value="JULIO">JULIO</option>
-      </select>
-    </div>
-    <div class="flex items-end">
-      <button id="applyFilters">Filtrar</button>
-    </div>
-    <div class="flex items-end">
-      <button id="clearFilters" class="bg-gray-600 hover:bg-gray-500">Limpar</button>
-    </div>
+  <div class="card">
+    <h2>Leads por Campanha</h2>
+    <canvas id="chartCampaign"></canvas>
   </div>
 
-  <!-- Cards -->
-  <div class="grid grid-cols-2 gap-6 mb-8 w-full max-w-3xl">
-    <div class="card text-center">
-      <div class="title">Total IGOR (hoje)</div>
-      <div id="countIgor" class="number">0</div>
-    </div>
-    <div class="card text-center">
-      <div class="title">Total JULIO (hoje)</div>
-      <div id="countJulio" class="number text-green-400">0</div>
-    </div>
+  <div class="card">
+    <h2>Origem (utm_source)</h2>
+    <canvas id="chartSource"></canvas>
   </div>
 
-  <!-- Tabela -->
-  <div class="card w-full max-w-5xl overflow-x-auto">
-    <div class="title mb-4">📥 Leads do dia</div>
-    <table id="leadsTable">
-      <thead>
-        <tr>
-          <th>Operador</th>
-          <th>Caminho</th>
-          <th>Data</th>
-          <th>Hora</th>
-          <th>utm_source</th>
-          <th>utm_campaign</th>
-          <th>fbclid</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+  <div class="card">
+    <h2>Criativo (utm_content)</h2>
+    <canvas id="chartCreative"></canvas>
   </div>
+
+  <div class="card">
+    <h2>Terminal (utm_term)</h2>
+    <canvas id="chartTerm"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>Total de Leads Hoje</h2>
+    <p id="totalLeads" style="font-size: 22px; color: #00FF00;">Carregando...</p>
+  </div>
+
+  <p class="updated" id="lastUpdate"></p>
 
   <script>
-    const SUPABASE_URL = "https://atexvoxukvaqittpqkov.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 🔗 Conexão Supabase
+    const supabase = window.supabase.createClient(
+      "https://atexvoxukvaqittpqkov.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4"
+    );
 
-    const tableBody = document.getElementById("tableBody");
-    const countIgor = document.getElementById("countIgor");
-    const countJulio = document.getElementById("countJulio");
-    const filterDate = document.getElementById("filterDate");
-    const filterOperador = document.getElementById("filterOperador");
-    const applyFilters = document.getElementById("applyFilters");
-    const clearFilters = document.getElementById("clearFilters");
-    const clock = document.getElementById("clock");
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    let charts = {};
 
-    let allLeads = [];
-    let igorCount = 0, julioCount = 0;
-
-    function atualizarRelogio() {
-      const agora = new Date();
-      const opcoes = { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" };
-      const hora = agora.toLocaleTimeString("pt-BR", opcoes);
-      const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-      clock.textContent = `📅 ${data} | 🕒 ${hora} (Horário de Brasília)`;
-    }
-    setInterval(atualizarRelogio, 1000);
-    atualizarRelogio();
-
-    async function loadInitialData() {
-      const hoje = new Date().toLocaleDateString("pt-BR");
-      const { data, error } = await supabase
-        .from("PRESSEL_DADOS_TRAFEGO_PJTCAROL")
-        .select("*")
-        .eq("data", hoje) // apenas leads do dia atual
-        .order("id", { ascending: false })
-        .limit(200);
-      if (error) { console.error("Erro ao carregar:", error); return; }
-      allLeads = data.reverse();
-      renderTable(allLeads);
-      updateCounts(allLeads);
+    // ⚙️ Agrupamento de dados
+    function groupByKey(data, key) {
+      const result = {};
+      for (const row of data) {
+        const k = row[key] || "Indefinido";
+        result[k] = (result[k] || 0) + 1;
+      }
+      return { labels: Object.keys(result), values: Object.values(result) };
     }
 
-    function updateCounts(data) {
-      igorCount = data.filter(l => l.operador === "IGOR").length;
-      julioCount = data.filter(l => l.operador === "JULIO").length;
-      countIgor.textContent = igorCount;
-      countJulio.textContent = julioCount;
-    }
-
-    function renderTable(data) {
-      tableBody.innerHTML = "";
-      data.slice(-200).reverse().forEach(l => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${l.operador}</td>
-          <td>${l.caminho}</td>
-          <td>${l.data}</td>
-          <td>${l.hora}</td>
-          <td>${l.utm_source || "-"}</td>
-          <td>${l.utm_campaign || "-"}</td>
-          <td>${l.fbclid ? l.fbclid.substring(0,12)+"..." : "-"}</td>
-        `;
-        tableBody.appendChild(row);
+    // 📊 Cria ou atualiza gráfico
+    function renderChart(id, type, data, label) {
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(document.getElementById(id), {
+        type,
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label,
+            data: data.values,
+            backgroundColor: ['#00FF00', '#00AAFF', '#FF9900', '#FF00FF', '#00FFFF', '#FFFF00', '#888888']
+          }]
+        },
+        options: {
+          plugins: { legend: { labels: { color: '#fff' } } },
+          scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } }
+        }
       });
     }
 
-    function applyFilterLogic() {
-      const selectedDate = filterDate.value;
-      const selectedOperador = filterOperador.value;
-      let filtered = allLeads;
-      if (selectedDate)
-        filtered = filtered.filter(l => l.data === selectedDate.split("-").reverse().join("/"));
-      if (selectedOperador)
-        filtered = filtered.filter(l => l.operador === selectedOperador);
-      renderTable(filtered);
-      updateCounts(filtered);
+    // 🧠 Atualiza o dashboard
+    async function updateDashboard() {
+      const { data, error } = await supabase
+        .from("PRESSEL_DADOS_TRAFEGO_PJTCAROL")
+        .select("utm_source, utm_campaign, utm_content, utm_term, data")
+        .eq("data", hoje);
+
+      if (error) return console.error("Erro Supabase:", error);
+
+      if (!data.length) {
+        document.getElementById("totalLeads").textContent = "Nenhum lead hoje ainda.";
+        return;
+      }
+
+      document.getElementById("totalLeads").textContent = `${data.length} Leads Hoje`;
+      document.getElementById("lastUpdate").textContent = `Atualizado em tempo real - ${new Date().toLocaleTimeString("pt-BR")}`;
+
+      renderChart("chartCampaign", "bar", groupByKey(data, "utm_campaign"), "Campanhas");
+      renderChart("chartSource", "doughnut", groupByKey(data, "utm_source"), "Fontes");
+      renderChart("chartCreative", "bar", groupByKey(data, "utm_content"), "Criativos");
+      renderChart("chartTerm", "pie", groupByKey(data, "utm_term"), "Canais");
     }
 
-    applyFilters.onclick = applyFilterLogic;
-    clearFilters.onclick = () => { filterDate.value=""; filterOperador.value=""; renderTable(allLeads); updateCounts(allLeads); };
+    // 🚀 Carrega ao iniciar
+    updateDashboard();
 
+    // 🔁 Escuta realtime
     supabase
-      .channel("realtime:leads")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
-        const lead = payload.new;
-        const hoje = new Date().toLocaleDateString("pt-BR");
-        if (lead.data === hoje) { // só adiciona se for do dia atual
-          allLeads.push(lead);
-          if (!filterDate.value && !filterOperador.value) addRowRealtime(lead);
-          updateCounts(allLeads);
-        }
+      .channel("pressel_live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
+        console.log("🔔 Atualização recebida:", payload);
+        updateDashboard();
       })
       .subscribe();
-
-    function addRowRealtime(lead){
-      const row=document.createElement("tr");
-      row.innerHTML=`
-        <td>${lead.operador}</td>
-        <td>${lead.caminho}</td>
-        <td>${lead.data}</td>
-        <td>${lead.hora}</td>
-        <td>${lead.utm_source || "-"}</td>
-        <td>${lead.utm_campaign || "-"}</td>
-        <td>${lead.fbclid ? lead.fbclid.substring(0,12)+"..." : "-"}</td>
-      `;
-      tableBody.prepend(row);
-    }
-
-    loadInitialData();
   </script>
 </body>
 </html>
