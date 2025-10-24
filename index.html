@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📊 Dashboard Operação de Tráfego Carol - 2</title>
 
-  <!-- Supabase + Tailwind + Chart.js -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -30,7 +29,6 @@
       font-size: 1.4rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
-      color: #f8fafc;
     }
     .number {
       font-size: 2.5rem;
@@ -52,55 +50,53 @@
     button {
       background-color: #38bdf8;
       color: #0f172a;
-      padding: 0.6rem 1.2rem;
-      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.4rem;
       font-weight: 600;
+      font-size: 0.9rem;
     }
     button:hover { background-color: #0ea5e9; }
     .header {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.3rem;
       margin-bottom: 1rem;
       text-align: center;
     }
     .clock {
-      font-size: 1.25rem;
+      font-size: 1rem;
       color: #38bdf8;
       font-weight: 600;
-      letter-spacing: 0.5px;
     }
-    .filter-bar {
-      padding: 0.75rem 1.5rem;
+    /* Filtro flutuante minimalista */
+    .filter-panel {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: rgba(15,23,42,0.85);
+      border: 1px solid rgba(56,189,248,0.3);
       border-radius: 0.75rem;
-      margin-bottom: 2rem;
-      font-weight: 600;
-      text-align: center;
-      width: 100%;
-      max-width: 600px;
-      transition: all 0.3s ease;
+      padding: 0.8rem;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 10px rgba(56,189,248,0.15);
+      z-index: 999;
     }
-    .filter-active {
-      background-color: rgba(14, 165, 233, 0.2);
-      color: #38bdf8;
-      border: 1px solid #38bdf8;
-    }
-    .filter-none {
-      background-color: rgba(100,116,139,0.1);
-      color: #94a3b8;
-      border: 1px solid rgba(100,116,139,0.2);
-    }
-    input, select {
-      background-color: #1e293b;
-      color: #f1f5f9;
-      padding: 0.5rem 0.75rem;
+    .filter-panel label { font-size: 0.75rem; color: #94a3b8; }
+    .filter-panel input, .filter-panel select {
+      background: #1e293b;
       border: 1px solid #334155;
-      border-radius: 0.5rem;
+      border-radius: 0.4rem;
+      padding: 0.3rem 0.5rem;
+      color: #f1f5f9;
+      font-size: 0.85rem;
     }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #38bdf8;
+    .filter-panel button {
+      margin-top: 0.4rem;
+      width: 100%;
+      font-size: 0.8rem;
     }
   </style>
 </head>
@@ -109,38 +105,26 @@
 
   <!-- Cabeçalho -->
   <div class="header">
-    <h1 class="text-4xl font-extrabold text-cyan-400 drop-shadow-md">
-      🚦 Dashboard Operação de Tráfego Carol - 2
-    </h1>
-    <p class="clock" id="clock">Carregando hora...</p>
-    <p class="text-slate-400 text-sm">Fuso horário: América/São_Paulo — atualização em tempo real</p>
+    <h1 class="text-3xl font-extrabold text-cyan-400">🚦 Dashboard Operação de Tráfego Carol - 2</h1>
+    <p class="clock" id="clock">🕒 Carregando hora...</p>
   </div>
 
-  <!-- Barra de Filtro Ativo -->
-  <div id="filterStatus" class="filter-bar filter-none">
-    🔍 Nenhum filtro ativo — exibindo dados em tempo real
-  </div>
-
-  <!-- 🔍 Filtros -->
-  <div class="card w-full max-w-4xl mb-10 flex flex-col sm:flex-row gap-4 items-center justify-center">
-    <div class="flex flex-col items-start">
-      <label class="text-sm text-slate-300 mb-1">Data (dd/mm/aaaa)</label>
-      <input type="text" id="filterDate" placeholder="Ex: 24/10/2025" />
-    </div>
-    <div class="flex flex-col items-start">
-      <label class="text-sm text-slate-300 mb-1">Operador</label>
-      <select id="filterOperador">
-        <option value="Todos">Todos</option>
-        <option value="IGOR">IGOR</option>
-        <option value="JULIO">JULIO</option>
-      </select>
-    </div>
+  <!-- Painel de Filtros (flutuante) -->
+  <div class="filter-panel">
+    <label>Data</label>
+    <input type="text" id="filterDate" placeholder="dd/mm/aaaa" class="w-full mb-2" />
+    <label>Operador</label>
+    <select id="filterOperador" class="w-full mb-2">
+      <option value="Todos">Todos</option>
+      <option value="IGOR">IGOR</option>
+      <option value="JULIO">JULIO</option>
+    </select>
     <button id="applyFilter">Filtrar</button>
-    <button id="clearFilter" class="bg-slate-600 hover:bg-slate-500 text-white">Limpar</button>
+    <button id="clearFilter" class="bg-slate-700 hover:bg-slate-600 text-white mt-1">Limpar</button>
   </div>
 
   <!-- Cards Totais -->
-  <div class="grid grid-cols-3 gap-6 mb-10 w-full max-w-5xl">
+  <div class="grid grid-cols-3 gap-6 mb-10 w-full max-w-5xl mt-8">
     <div class="card text-center">
       <div class="title">Operador IGOR</div>
       <div id="countIgor" class="number">0</div>
@@ -202,7 +186,7 @@
   <p class="text-slate-500 text-sm mt-6">© Operação Carol — Realtime Dashboard</p>
 
   <script>
-    // 🕒 Relógio São Paulo
+    // 🕒 Relógio SP
     function updateClock() {
       const options = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' };
       document.getElementById('clock').textContent = '🕒 ' + new Intl.DateTimeFormat('pt-BR', options).format(new Date());
@@ -210,27 +194,23 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // 🧩 Supabase
-    const SUPABASE_URL = "https://atexvoxukvaqittpqkov.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Supabase
+    const supabase = window.supabase.createClient(
+      "https://atexvoxukvaqittpqkov.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0ZXh2b3h1a3ZhcWl0dHBxa292Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTYyNjAsImV4cCI6MjA3NjEzMjI2MH0.HptK9KRkqkSQL3jrwAwH0rOSDGhlXOTwGwGqjwNgtU4"
+    );
 
-    const tableBody = document.getElementById("tableBody");
     const countIgor = document.getElementById("countIgor");
     const countJulio = document.getElementById("countJulio");
     const countTotal = document.getElementById("countTotal");
+    const tableBody = document.getElementById("tableBody");
     const toggleLeads = document.getElementById("toggleLeads");
     const filterDate = document.getElementById("filterDate");
     const filterOperador = document.getElementById("filterOperador");
     const applyFilter = document.getElementById("applyFilter");
     const clearFilter = document.getElementById("clearFilter");
-    const filterStatus = document.getElementById("filterStatus");
 
-    let igorCount = 0, julioCount = 0, totalCount = 0;
-    let allData = [];
-    let charts = {};
-    let showingAll = false;
-    let currentFilter = { date: null, operador: "Todos" };
+    let allData = [], showingAll = false, charts = {}, currentFilter = { date: null, operador: "Todos" };
 
     async function loadData(dateFilter = null, operador = "Todos") {
       let query = supabase.from("PRESSEL_DADOS_TRAFEGO_PJTCAROL").select("*");
@@ -240,31 +220,41 @@
 
       if (operador !== "Todos") query = query.eq("operador", operador);
 
-      const { data, error } = await query.order("id", { ascending: false }).limit(100);
+      const { data, error } = await query.order("id", { ascending: false }); // 🔥 Removido .limit(100)
       if (error) return console.error(error);
 
-      allData = data;
-      currentFilter = { date: dateFilter, operador };
-      updateFilterStatus();
+      allData = data || [];
       renderTable();
       updateCounts();
       updateCharts();
     }
 
-    function updateFilterStatus() {
-      if (currentFilter.date || currentFilter.operador !== "Todos") {
-        filterStatus.className = "filter-bar filter-active";
-        filterStatus.textContent = `🔎 Filtro ativo: ${currentFilter.date || 'Data Atual'} — ${currentFilter.operador}`;
-      } else {
-        filterStatus.className = "filter-bar filter-none";
-        filterStatus.textContent = "🔍 Nenhum filtro ativo — exibindo dados em tempo real";
-      }
+    function updateCounts() {
+      const igor = allData.filter(l => l.operador === "IGOR").length;
+      const julio = allData.filter(l => l.operador === "JULIO").length;
+      countIgor.textContent = igor;
+      countJulio.textContent = julio;
+      countTotal.textContent = allData.length;
     }
 
     function renderTable() {
       tableBody.innerHTML = "";
-      const displayData = showingAll ? allData : allData.slice(0, 10);
-      displayData.forEach(addRow);
+      const display = showingAll ? allData : allData.slice(0, 10);
+      display.forEach(lead => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${lead.operador}</td>
+          <td>${lead.caminho}</td>
+          <td>${lead.data}</td>
+          <td>${lead.hora}</td>
+          <td>${lead.utm_source || "-"}</td>
+          <td>${lead.utm_campaign || "-"}</td>
+          <td>${lead.utm_content || "-"}</td>
+          <td>${lead.utm_term || "-"}</td>
+          <td>${lead.fbclid ? lead.fbclid.substring(0, 10) + "..." : "-"}</td>
+        `;
+        tableBody.appendChild(row);
+      });
     }
 
     toggleLeads.addEventListener("click", () => {
@@ -273,96 +263,36 @@
       renderTable();
     });
 
-    applyFilter.addEventListener("click", () => {
-      const date = filterDate.value.trim();
-      const operador = filterOperador.value;
-      loadData(date || null, operador);
-    });
-
+    applyFilter.addEventListener("click", () => loadData(filterDate.value.trim() || null, filterOperador.value));
     clearFilter.addEventListener("click", () => {
       filterDate.value = "";
       filterOperador.value = "Todos";
       loadData();
     });
 
-    function updateCounts() {
-      igorCount = allData.filter(l => l.operador === "IGOR").length;
-      julioCount = allData.filter(l => l.operador === "JULIO").length;
-      totalCount = allData.length;
-      countIgor.textContent = igorCount;
-      countJulio.textContent = julioCount;
-      countTotal.textContent = totalCount;
-    }
-
-    function addRow(lead) {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${lead.operador}</td>
-        <td>${lead.caminho}</td>
-        <td>${lead.data}</td>
-        <td>${lead.hora}</td>
-        <td>${lead.utm_source || "-"}</td>
-        <td>${lead.utm_campaign || "-"}</td>
-        <td>${lead.utm_content || "-"}</td>
-        <td>${lead.utm_term || "-"}</td>
-        <td>${lead.fbclid ? lead.fbclid.substring(0, 10) + "..." : "-"}</td>
-      `;
-      tableBody.appendChild(row);
+    function groupCount(key) {
+      const counts = {};
+      allData.forEach(l => {
+        const k = (l[key] && l[key] !== "Indefinido" && l[key].trim() !== "") ? l[key] : null;
+        if (k) counts[k] = (counts[k] || 0) + 1;
+      });
+      return { labels: Object.keys(counts), values: Object.values(counts) };
     }
 
     function updateCharts() {
-      const groupCount = (key) => {
-        const counts = {};
-        allData.forEach(l => {
-          const k = (l[key] && l[key] !== "Indefinido" && l[key].trim() !== "") ? l[key] : null;
-          if (k) counts[k] = (counts[k] || 0) + 1;
-        });
-        return { labels: Object.keys(counts), values: Object.values(counts) };
-      };
-
-      const datasets = {
+      const dataSets = {
         chartSource: groupCount("utm_source"),
         chartCampaign: groupCount("utm_campaign"),
         chartContent: groupCount("utm_content"),
         chartTerm: groupCount("utm_term")
       };
 
-      Object.entries(datasets).forEach(([id, d]) => {
+      Object.entries(dataSets).forEach(([id, d]) => {
         if (charts[id]) charts[id].destroy();
         charts[id] = new Chart(document.getElementById(id), {
           type: "bar",
-          data: {
-            labels: d.labels,
-            datasets: [{
-              label: "Leads",
-              data: d.values,
-              backgroundColor: "#38bdf8",
-              hoverBackgroundColor: "#7dd3fc",
-              borderWidth: 1.5,
-              borderColor: "#0ea5e9"
-            }]
-          },
-          options: {
-            responsive: true,
-            indexAxis: "y",
-            scales: {
-              x: { ticks: { color: "#f1f5f9" } },
-              y: { ticks: { color: "#f1f5f9" } }
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: "#0ea5e9",
-                titleColor: "#fff",
-                bodyColor: "#fff",
-                bodyFont: { weight: "bold" },
-                titleFont: { weight: "bold" },
-                callbacks: {
-                  label: (context) => ` ${context.formattedValue} leads`
-                }
-              }
-            }
-          }
+          data: { labels: d.labels, datasets: [{ data: d.values, backgroundColor: "#38bdf8", hoverBackgroundColor: "#7dd3fc" }] },
+          options: { responsive: true, indexAxis: "y", plugins: { legend: { display: false } } }
         });
       });
     }
@@ -371,15 +301,10 @@
       .channel("realtime:leads")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "PRESSEL_DADOS_TRAFEGO_PJTCAROL" }, payload => {
         const lead = payload.new;
-        if (
-          (!currentFilter.date || lead.data === currentFilter.date) &&
-          (currentFilter.operador === "Todos" || lead.operador === currentFilter.operador)
-        ) {
-          allData.unshift(lead);
-          updateCounts();
-          renderTable();
-          updateCharts();
-        }
+        allData.unshift(lead);
+        updateCounts();
+        renderTable();
+        updateCharts();
       })
       .subscribe();
 
